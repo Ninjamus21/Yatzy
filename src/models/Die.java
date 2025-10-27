@@ -5,6 +5,7 @@ import java.util.Random;
 public class Die {
     private int eyes = 0;
     private final Random random = new Random();
+    private boolean isHeld = false;
 
     /**
      * Creates a new Die object, with face set to eyes. Used for test purpose
@@ -18,6 +19,15 @@ public class Die {
     }
 
     public void roll() {
-        //TODO: implement roll method.
+        this.eyes = random.nextInt(6) + 1;
+    }
+    public int getEyes() {
+        return eyes;
+    }
+    public boolean getisHeld() {
+        return isHeld;
+    }
+    public void setisHeld(boolean isHeld) {
+        this.isHeld = isHeld;
     }
 }
