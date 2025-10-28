@@ -10,11 +10,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import models.Die;
 import models.RaffleCup;
-
-import javax.swing.text.LabelView;
 
 public class YatzyGui extends Application {
     @Override
@@ -22,7 +20,7 @@ public class YatzyGui extends Application {
         primaryStage.setTitle("Yatzy Game");
         GridPane pane = new GridPane();
         initContent(pane);
-        Scene scene = new Scene(pane, 400, 300);
+        Scene scene = new Scene(pane, 400, 700);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -85,6 +83,23 @@ public class YatzyGui extends Application {
     TextField[] scoreTextFields = {txtScoreOnePair, txtScoreTwoPair, txtScoreThreeSame, txtScoreFourSame,
             txtScoreSmallStraight, txtScoreLargeStraight, txtScoreFullHouse, txtScoreChance, txtScoreYatzy};
 
+    // result section textfields
+    TextField txfSum = new TextField();
+    TextField txfBonus = new TextField();
+    TextField txfTotal = new TextField();
+
+    TextField[] txfResultSection = {txfSum, txfBonus, txfTotal};
+
+    // result section labels
+    Label lblSum = new Label("Sum:");
+    Label lblBonus = new Label("Bonus:");
+    Label lblTotal = new Label("Total:");
+
+    Label[] lblResultSection = {lblSum, lblBonus, lblTotal};
+
+    // restart button
+    Button btnRestart = new Button("Restart Game");
+
     private void initContent(GridPane pane) {
         pane.setGridLinesVisible(false);
         pane.setPadding(new Insets(20));
@@ -99,24 +114,32 @@ public class YatzyGui extends Application {
             labels[index].setPrefSize(60, 60);
             labels[index].setAlignment(Pos.CENTER);
             labels[index].setStyle("""
-        -fx-border-radius: 5;
-        -fx-border-color: black;
-        -fx-border-width: 2;
-        -fx-background-radius: 5;
-        -fx-background-color: linear-gradient(to bottom, white, #f0f0f0);
-        -fx-font-size: 18px;
-        -fx-font-weight: bold;
-        -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 5, 0, 2, 2);
-    """);
-            diceLabels.getChildren().add(labels[index]);
+                        -fx-border-radius: 5;
+                        -fx-border-color: black;
+                        -fx-border-width: 2;
+                        -fx-background-radius: 5;
+                        -fx-background-color: linear-gradient(to bottom, white, #f0f0f0);
+                        -fx-font-size: 18px;
+                        -fx-font-weight: bold;
+                        -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 5, 0, 2, 2);
+                    """);
+
+            holdBoxes[index].setPrefWidth(80);
+            holdBoxes[index].setGraphicTextGap(0);
+            holdBoxes[index].setWrapText(false);
+
+            VBox dieBox = new VBox(6);
+            dieBox.setAlignment(Pos.CENTER);
+            dieBox.getChildren().addAll(labels[index], holdBoxes[index]);
+
+            diceLabels.getChildren().add(dieBox);
+
         }
 
-
-        for (int index = 0; index < holdBoxes.length; index++) {
-            pane.add(holdBoxes[index], index, 1);
-        }
 
         Label antalKastLabel = new Label("Antal kast tilbage:");
+        antalKastLabel.setPrefWidth(160);
+        antalKastLabel.setGraphicTextGap(0);
         pane.add(antalKastLabel, 0, 2);
 
         Label antalKastValueLabel = new Label("3");
@@ -142,10 +165,43 @@ public class YatzyGui extends Application {
         }
 
         for (int index = 0; index < scoreLabels.length; index++) {
+            scoreLabels[index].setPrefWidth(120);
+            scoreLabels[index].setGraphicTextGap(0);
             pane.add(scoreLabels[index], 2, index + 3);
             pane.add(scoreTextFields[index], 3, index + 3);
         }
 
+        // design for result section textfields and labels
+        for (TextField txf : txfResultSection) {
+            txf.setPrefWidth(80);
+            txf.setEditable(false);
+            txf.setStyle("""
+                        -fx-background-color: #f9f9f9;
+                        -fx-border-color: #d3d3d3;
+                        -fx-border-width: 1;
+                        -fx-padding: 5;
+                    """);
+        }
+        for (Label lbl : lblResultSection) {
+            lbl.setPrefWidth(80);
+            lbl.setGraphicTextGap(0);
+            lbl.setStyle("""
+                        -fx-font-size: 14px;
+                    -fx-font-weight: bold""");
+        }
+// result section init
+
+        pane.addRow(scoreLabels.length + 3, lblSum, txfSum);
+        pane.addRow(scoreLabels.length + 4, lblBonus, txfBonus);
+        pane.addRow(scoreLabels.length + 5, lblTotal, txfTotal);
+
+        // restart button design and action
+        btnRestart.setPrefWidth(120);
+        pane.add(btnRestart, 2, scoreLabels.length + 6, 2, 1);
+        btnRestart.setOnAction(event -> {
+            resetGame();
+            antalKastValueLabel.setText(String.valueOf(antalKast));
+        });
     }
 
     private void updateDiceLabels() {
@@ -163,6 +219,41 @@ public class YatzyGui extends Application {
         for (int index = 0; index < holdBoxes.length; index++) {
             raffleCup.getDice()[index].setisHeld(holdBoxes[index].isSelected());
 
+        }
+    }
+
+    private void captureScores() {
+       models.YatzyResultCalculator calc = new models.YatzyResultCalculator(raffleCup.getDice());
+
+       // upper section scores (1...6) - only write suggestion if field is empty
+        for (int index = 0; index < upSecLabels.length; index++) {
+            int eyeValue = index + 1;
+            int score = calc.upperSectionScore(eyeValue);
+            if (upSecTextFields[index].getText() == null || upSecTextFields[index].getText().isEmpty()){
+                upSecTextFields[index].setText(String.valueOf(score));
+            }
+        }
+        // compute sumUpper from whatever is currently in the fields
+        int sumUpper = 0;
+        for (TextField tf : upSecTextFields) {
+            String txt = tf.getText();
+            if(txt != null && !txt.isEmpty()) {
+                try {
+                    sumUpper += Integer.parseInt(txt);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+    }
+
+
+    private void resetGame() {
+        antalKast = 3;
+        for (CheckBox holdBox : holdBoxes) {
+            holdBox.setSelected(false);
+        }
+        for (Label label : labels) {
+            label.setText("Dice");
         }
     }
 }
