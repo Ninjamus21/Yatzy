@@ -26,6 +26,7 @@ public class YatzyGui extends Application {
     }
 
     private int antalKast = 3;
+    private int remainingScores;
 
     RaffleCup raffleCup = new RaffleCup();
 
@@ -100,11 +101,23 @@ public class YatzyGui extends Application {
     // restart button
     Button btnRestart = new Button("Restart Game");
 
+    // throw button set to field for the handlers
+    Button throwDiceButton = new Button("Throw Dice");
+
+    // confirmation tracking
+    private boolean[] confirmedUp;
+    private boolean[] confirmedLower;
+
     private void initContent(GridPane pane) {
         pane.setGridLinesVisible(false);
         pane.setPadding(new Insets(20));
         pane.setHgap(10);
         pane.setVgap(10);
+
+        // initialize confirmation arrays and remaining score counter... check for checked scores
+        confirmedUp = new boolean[upSecTextFields.length];
+        confirmedLower = new boolean[scoreTextFields.length];
+        remainingScores = upSecTextFields.length + scoreTextFields.length;
 
         HBox diceLabels = new HBox(15); // 15px spacing between dice
         diceLabels.setAlignment(Pos.CENTER); // center horizontally
@@ -145,7 +158,7 @@ public class YatzyGui extends Application {
         Label antalKastValueLabel = new Label("3");
         pane.add(antalKastValueLabel, 1, 2);
 
-        Button throwDiceButton = new Button("Throw Dice");
+
         pane.add(throwDiceButton, 2, 2, 2, 1);
 
         throwDiceButton.setOnAction(event -> {
@@ -154,6 +167,10 @@ public class YatzyGui extends Application {
                 updateDiceLabels();
                 updateAntalKastLabel();
                 antalKastValueLabel.setText(String.valueOf(antalKast));
+                captureScores();
+                if (antalKast == 0) {
+                    throwDiceButton.setDisable(true);
+                }
             }
         });
 
@@ -199,9 +216,89 @@ public class YatzyGui extends Application {
         btnRestart.setPrefWidth(120);
         pane.add(btnRestart, 2, scoreLabels.length + 6, 2, 1);
         btnRestart.setOnAction(event -> {
-            resetGame();
-            antalKastValueLabel.setText(String.valueOf(antalKast));
+            resetGame(antalKastValueLabel);
         });
+
+        // attach confirm handlers so user can lock in scores for both upper and lower part
+        attachConfirmHandlers(antalKastValueLabel);
+    }
+
+    private void attachConfirmHandlers(Label antalKastValueLabel) {
+        for (int i = 0; i < upSecTextFields.length; i++) {
+            final int idx = i;
+            upSecTextFields[i].setEditable(true);
+            upSecTextFields[i].setOnMouseClicked(e -> {
+                if (remainingScores <= 0) return;
+                if (confirmedUp[idx]) return;
+                String txt = upSecTextFields[idx].getText();
+                if (txt == null || txt.isEmpty()) return; // nothing to confirm
+                // confirm this upper score
+                confirmedUp[idx] = true;
+                upSecTextFields[idx].setEditable(false);
+                upSecTextFields[idx].setStyle("-fx-background-color: lightgreen;");
+                remainingScores--;
+                // clear other unconfirmed suggestions
+                clearUnconfirmedSuggestions();
+                // reset throws for next round and UI
+                antalKast = 3;
+                antalKastValueLabel.setText(String.valueOf(antalKast));
+                for (CheckBox cb : holdBoxes) cb.setSelected(false);
+                for (Label lbl : labels) lbl.setText("Dice");
+                throwDiceButton.setDisable(false);
+                // update totals (confirmed field already contains value)
+                captureScores();
+                if (remainingScores == 0) {
+                    throwDiceButton.setDisable(true);
+                }
+            });
+        }
+        // exactly the same but for score section lock in
+        for (int i = 0; i < scoreTextFields.length; i++) {
+            final int idx = i;
+            scoreTextFields[i].setEditable(true);
+            scoreTextFields[i].setOnMouseClicked(e -> {
+                if (remainingScores <= 0) return;
+                if (confirmedUp[idx]) return;
+                String txt = scoreTextFields[idx].getText();
+                if (txt == null || txt.isEmpty()) return;
+                // confirm lower score
+                confirmedLower[idx] = true;
+                scoreTextFields[idx].setEditable(false);
+                scoreTextFields[idx].setStyle("-fx-background-color: lightgreen;");
+                remainingScores--;
+                // clear the rest of the unconfirmed scores
+                clearUnconfirmedSuggestions();
+                // reset throw for next round and ui
+                antalKast = 3;
+                antalKastValueLabel.setText(String.valueOf(antalKast));
+                for (CheckBox cb : holdBoxes) cb.setSelected(false);
+                for (Label lbl : labels) {
+                    lbl.setText("Dice");
+                }
+                throwDiceButton.setDisable(false);
+                // update the totals
+                captureScores();
+                if (remainingScores == 0) {
+                    throwDiceButton.setDisable(true);
+                }
+            });
+
+        }
+    }
+
+    private void clearUnconfirmedSuggestions() {
+        for (int i = 0; i < upSecTextFields.length; i++) {
+            if (!confirmedUp[i]) {
+                upSecTextFields[i].setText("");
+                upSecTextFields[i].setStyle(null);
+            }
+        }
+        for (int i = 0; i < scoreTextFields.length; i++) {
+            if (!confirmedLower[i]) {
+                scoreTextFields[i].setText("");
+                scoreTextFields[i].setStyle(null);
+            }
+        }
     }
 
     private void updateDiceLabels() {
@@ -223,38 +320,102 @@ public class YatzyGui extends Application {
     }
 
     private void captureScores() {
-       models.YatzyResultCalculator calc = new models.YatzyResultCalculator(raffleCup.getDice());
+        // Suggest scores only for unconfirmed fields, then update totals
+        models.YatzyResultCalculator calc = new models.YatzyResultCalculator(raffleCup.getDice());
 
-       // upper section scores (1...6) - only write suggestion if field is empty
+        // upper section scores (1...6) - only write suggestion if field is empty and not confirmed
         for (int index = 0; index < upSecLabels.length; index++) {
             int eyeValue = index + 1;
             int score = calc.upperSectionScore(eyeValue);
-            if (upSecTextFields[index].getText() == null || upSecTextFields[index].getText().isEmpty()){
+            if (!confirmedUp[index] && (upSecTextFields[index].getText() == null || upSecTextFields[index].getText().isEmpty())) {
                 upSecTextFields[index].setText(String.valueOf(score));
             }
         }
-        // compute sumUpper from whatever is currently in the fields
-        int sumUpper = 0;
-        for (TextField tf : upSecTextFields) {
-            String txt = tf.getText();
-            if(txt != null && !txt.isEmpty()) {
-                try {
-                    sumUpper += Integer.parseInt(txt);
-                } catch (NumberFormatException ignored) {
-                }
+
+        // lower section suggestions - ensure order matches labels and only for unconfirmed
+        int[] lowerScores = new int[]{
+                calc.onePairScore(),
+                calc.twoPairScore(),
+                calc.threeOfAKindScore(),
+                calc.fourOfAKindScore(),
+                calc.smallStraightScore(),
+                calc.largeStraightScore(),
+                calc.fullHouseScore(),
+                calc.chanceScore(),
+                calc.yatzyScore()
+        };
+
+        for (int index = 0; index < scoreTextFields.length; index++) {
+            if (!confirmedLower[index] && (scoreTextFields[index].getText() == null || scoreTextFields[index].getText().isEmpty())) {
+                scoreTextFields[index].setText(String.valueOf(lowerScores[index]));
             }
         }
+
+        // update totals after suggestions
+        updateTotals();
+    }
+
+    private void updateTotals() {
+        int sumUpper = 0;
+        for (int i = 0; i < upSecTextFields.length; i++) {
+            String txt = upSecTextFields[i].getText();
+            if (txt != null && !txt.isEmpty()) {
+                try {
+                    sumUpper += Integer.parseInt(txt);
+                } catch (NumberFormatException ignored) { }
+            }
+        }
+
+        int sumLower = 0;
+        for (int i = 0; i < scoreTextFields.length; i++) {
+            String txt = scoreTextFields[i].getText();
+            if (txt != null && !txt.isEmpty()) {
+                try {
+                    sumLower += Integer.parseInt(txt);
+                } catch (NumberFormatException ignored) { }
+            }
+        }
+
+        int bonus = (sumUpper >= 63) ? 50 : 0;
+        int total = sumUpper + bonus + sumLower;
+
+        txfSum.setText(String.valueOf(sumUpper));
+        txfBonus.setText(String.valueOf(bonus));
+        txfTotal.setText(String.valueOf(total));
     }
 
 
-    private void resetGame() {
+
+    private void resetGame(Label antalKastValueLabel) {
         antalKast = 3;
+        remainingScores = upSecTextFields.length + scoreTextFields.length;
+        confirmedUp = new boolean[upSecTextFields.length];
+        confirmedLower = new boolean[scoreTextFields.length];
+
         for (CheckBox holdBox : holdBoxes) {
             holdBox.setSelected(false);
         }
         for (Label label : labels) {
             label.setText("Dice");
         }
+        // clear fields and styles
+        for (TextField tf : upSecTextFields) {
+            tf.setText("");
+            tf.setEditable(true);
+            tf.setStyle(null);
+        }
+        for (TextField tf : scoreTextFields) {
+            tf.setText("");
+            tf.setEditable(true);
+            tf.setStyle(null);
+        }
+        txfSum.setText("");
+        txfBonus.setText("");
+        txfTotal.setText("");
+
+        antalKastValueLabel.setText(String.valueOf(antalKast));
+        throwDiceButton.setDisable(false);
     }
 }
+
 
