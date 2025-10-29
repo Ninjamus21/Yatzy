@@ -47,6 +47,15 @@ public class YatzyResultCalculator {
         return eyes;
     }
 
+    public int onePairScoreFromLow() {
+        int[] eyes = sortEyeToLow();
+        for (int index = 0; index < eyes.length - 1; index++) {
+            if (eyes[index] == eyes[index + 1]) {
+                return eyes[index] * 2;
+            }
+        }
+        return 0;
+    }
     public int onePairScore() {
         int[] eyes = sortEyeToLow();
         for (int index = eyes.length - 1; index > 0; index--) {
@@ -79,7 +88,7 @@ public class YatzyResultCalculator {
 
     public int threeOfAKindScore() {
         int[] eyes = sortEyeToLow();
-        for (int index = eyes.length - 1; index > eyes.length - 3; index--) {
+        for (int index = eyes.length - 1; index >= eyes.length - 3; index--) {
             if (eyes[index] == eyes[index - 1] && eyes[index] == eyes[index - 2]) {
                 return eyes[index] * 3;
             }
@@ -89,7 +98,7 @@ public class YatzyResultCalculator {
 
     public int fourOfAKindScore() {
         int[] eyes = sortEyeToLow();
-        for (int index = eyes.length - 1; index > eyes.length - 2; index--) {
+        for (int index = eyes.length - 1; index >= eyes.length - 2; index--) {
             if (eyes[index] == eyes[index - 1] && eyes[index] == eyes[index - 2] && eyes[index] == eyes[index - 3]) {
                 return eyes[index] * 4;
             }
@@ -142,9 +151,13 @@ public class YatzyResultCalculator {
     }
 
     public int fullHouseScore() {
-        if (threeOfAKindScore() > 0 && onePairScore() > 0 && fourOfAKindScore() == 0) {
+        if (threeOfAKindScore() > 0 && onePairScore() > 0 && fourOfAKindScore() == 0 && onePairScore() * 1.5 != threeOfAKindScore() ) {
             return threeOfAKindScore() + onePairScore();
         }
+        if (threeOfAKindScore() > 0 && onePairScoreFromLow() > 0 && fourOfAKindScore() == 0 && onePairScoreFromLow() * 1.5 != threeOfAKindScore() ) {
+            return threeOfAKindScore() + onePairScoreFromLow();
+        }
+
         return 0;
     }
 

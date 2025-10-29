@@ -224,6 +224,7 @@ public class YatzyGui extends Application {
         attachConfirmHandlers(antalKastValueLabel);
     }
 
+    // end of gui styling and layout
     private void attachConfirmHandlers(Label antalKastValueLabel) {
        if (lockinScores) {
            attachLeftHandlers(antalKastValueLabel);
@@ -236,7 +237,6 @@ public class YatzyGui extends Application {
         for (int i = 0; i < scoreTextFields.length; i++) {
             final int idx = i;
             scoreTextFields[i].setEditable(true);
-                scoreTextFields[i].setEditable(false);
                 scoreTextFields[i].setOnMouseClicked(e -> {
                     lockinScores = false;
                     if (remainingScores <= 0) return;
@@ -334,7 +334,6 @@ public class YatzyGui extends Application {
     private void updateCheckBoxes() {
         for (int index = 0; index < holdBoxes.length; index++) {
             raffleCup.getDice()[index].setisHeld(holdBoxes[index].isSelected());
-
         }
     }
 
@@ -402,6 +401,11 @@ public class YatzyGui extends Application {
         int bonus = (sumUpper >= 63) ? 50 : 0;
         int total = sumUpper + bonus + sumLower;
 
+        if (bonus > 0) {
+            txfBonus.setStyle("-fx-background-color: lightgreen;");
+        } else {
+            txfBonus.setStyle(null);
+        }
         txfSum.setText(String.valueOf(sumUpper));
         txfBonus.setText(String.valueOf(bonus));
         txfTotal.setText(String.valueOf(total));
