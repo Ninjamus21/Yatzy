@@ -27,6 +27,7 @@ public class YatzyGui extends Application {
 
     private int antalKast = 3;
     private int remainingScores;
+    private boolean lockinScores = true;
 
     RaffleCup raffleCup = new RaffleCup();
 
@@ -167,9 +168,9 @@ public class YatzyGui extends Application {
                 updateDiceLabels();
                 updateAntalKastLabel();
                 antalKastValueLabel.setText(String.valueOf(antalKast));
-                captureScores();
                 if (antalKast == 0) {
                     throwDiceButton.setDisable(true);
+                    captureScores();
                 }
             }
         });
@@ -224,67 +225,85 @@ public class YatzyGui extends Application {
     }
 
     private void attachConfirmHandlers(Label antalKastValueLabel) {
-        for (int i = 0; i < upSecTextFields.length; i++) {
-            final int idx = i;
-            upSecTextFields[i].setEditable(true);
-            upSecTextFields[i].setOnMouseClicked(e -> {
-                if (remainingScores <= 0) return;
-                if (confirmedUp[idx]) return;
-                String txt = upSecTextFields[idx].getText();
-                if (txt == null || txt.isEmpty()) return; // nothing to confirm
-                // confirm this upper score
-                confirmedUp[idx] = true;
-                upSecTextFields[idx].setEditable(false);
-                upSecTextFields[idx].setStyle("-fx-background-color: lightgreen;");
-                remainingScores--;
-                // clear other unconfirmed suggestions
-                clearUnconfirmedSuggestions();
-                // reset throws for next round and UI
-                antalKast = 3;
-                antalKastValueLabel.setText(String.valueOf(antalKast));
-                for (CheckBox cb : holdBoxes) cb.setSelected(false);
-                for (Label lbl : labels) lbl.setText("Dice");
-                throwDiceButton.setDisable(false);
-                // update totals (confirmed field already contains value)
-                captureScores();
-                if (remainingScores == 0) {
-                    throwDiceButton.setDisable(true);
-                }
-            });
-        }
+       if (lockinScores) {
+           attachLeftHandlers(antalKastValueLabel);
+           attachRightHandlers(antalKastValueLabel);
+       }
         // exactly the same but for score section lock in
+    }
+
+    private void attachRightHandlers(Label antalKastValueLabel) {
         for (int i = 0; i < scoreTextFields.length; i++) {
             final int idx = i;
             scoreTextFields[i].setEditable(true);
-            scoreTextFields[i].setOnMouseClicked(e -> {
-                if (remainingScores <= 0) return;
-                if (confirmedUp[idx]) return;
-                String txt = scoreTextFields[idx].getText();
-                if (txt == null || txt.isEmpty()) return;
-                // confirm lower score
-                confirmedLower[idx] = true;
-                scoreTextFields[idx].setEditable(false);
-                scoreTextFields[idx].setStyle("-fx-background-color: lightgreen;");
-                remainingScores--;
-                // clear the rest of the unconfirmed scores
+                scoreTextFields[i].setEditable(false);
+                scoreTextFields[i].setOnMouseClicked(e -> {
+                    lockinScores = false;
+                    if (remainingScores <= 0) return;
+                    if (confirmedLower[idx]) return;
+                    String txt = scoreTextFields[idx].getText();
+                    if (txt == null || txt.isEmpty()) return;
+                    // confirm lower score
+                    confirmedLower[idx] = true;
+                    scoreTextFields[idx].setEditable(false);
+                    scoreTextFields[idx].setStyle("-fx-background-color: lightgreen;");
+                    remainingScores--;
+                    // clear the rest of the unconfirmed scores
+                    clearUnconfirmedSuggestions();
+                    // reset throw for next round and ui
+
+                    antalKast = 3;
+                    antalKastValueLabel.setText(String.valueOf(antalKast));
+                    for (CheckBox cb : holdBoxes) cb.setSelected(false);
+                    for (Label lbl : labels) {
+                        lbl.setText("Dice");
+                    }
+                    throwDiceButton.setDisable(false);
+                    // update the totals
+
+                    if (remainingScores == 0) {
+                        throwDiceButton.setDisable(true);
+                    }
+                });
                 clearUnconfirmedSuggestions();
-                // reset throw for next round and ui
-                antalKast = 3;
-                antalKastValueLabel.setText(String.valueOf(antalKast));
-                for (CheckBox cb : holdBoxes) cb.setSelected(false);
-                for (Label lbl : labels) {
-                    lbl.setText("Dice");
-                }
-                throwDiceButton.setDisable(false);
-                // update the totals
-                captureScores();
-                if (remainingScores == 0) {
-                    throwDiceButton.setDisable(true);
-                }
-            });
+            }
 
         }
-    }
+
+    private void attachLeftHandlers(Label antalKastValueLabel) {
+        for (int i = 0; i < upSecTextFields.length; i++) {
+            final int idx = i;
+            upSecTextFields[i].setEditable(true);
+                upSecTextFields[i].setEditable(false);
+                upSecTextFields[i].setOnMouseClicked(e -> {
+                    lockinScores = false;
+                    if (remainingScores <= 0) return;
+                    if (confirmedUp[idx]) return;
+                    String txt = upSecTextFields[idx].getText();
+                    if (txt == null || txt.isEmpty()) return; // nothing to confirm
+                    // confirm this upper score
+                    confirmedUp[idx] = true;
+                    upSecTextFields[idx].setEditable(false);
+                    upSecTextFields[idx].setStyle("-fx-background-color: lightgreen;");
+                    remainingScores--;
+                    // clear other unconfirmed suggestions
+                    clearUnconfirmedSuggestions();
+                    // reset throws for next round and UI
+                    antalKast = 3;
+                    antalKastValueLabel.setText(String.valueOf(antalKast));
+                    for (CheckBox cb : holdBoxes) cb.setSelected(false);
+                    for (Label lbl : labels) lbl.setText("Dice");
+                    throwDiceButton.setDisable(false);
+                    // update totals (confirmed field already contains value)
+
+                    if (remainingScores == 0) {
+                        throwDiceButton.setDisable(true);
+                    }
+                });
+                clearUnconfirmedSuggestions();
+            }
+        }
+
 
     private void clearUnconfirmedSuggestions() {
         for (int i = 0; i < upSecTextFields.length; i++) {
@@ -353,6 +372,8 @@ public class YatzyGui extends Application {
 
         // update totals after suggestions
         updateTotals();
+
+
     }
 
     private void updateTotals() {
@@ -362,7 +383,8 @@ public class YatzyGui extends Application {
             if (txt != null && !txt.isEmpty()) {
                 try {
                     sumUpper += Integer.parseInt(txt);
-                } catch (NumberFormatException ignored) { }
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
 
@@ -372,7 +394,8 @@ public class YatzyGui extends Application {
             if (txt != null && !txt.isEmpty()) {
                 try {
                     sumLower += Integer.parseInt(txt);
-                } catch (NumberFormatException ignored) { }
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
 
@@ -385,9 +408,9 @@ public class YatzyGui extends Application {
     }
 
 
-
     private void resetGame(Label antalKastValueLabel) {
         antalKast = 3;
+        lockinScores = true;
         remainingScores = upSecTextFields.length + scoreTextFields.length;
         confirmedUp = new boolean[upSecTextFields.length];
         confirmedLower = new boolean[scoreTextFields.length];

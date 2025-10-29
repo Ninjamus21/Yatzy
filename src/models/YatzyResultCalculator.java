@@ -61,7 +61,7 @@ public class YatzyResultCalculator {
         int[] eyes = sortEyeToLow();
         int[] pairs = new int[2];
 
-        for (int index = eyes.length - 1; index > 0; index--) {
+        for (int index = eyes.length - 1; index > eyes.length - 4; index--) {
             if (eyes[index] == eyes[index - 1]) {
                 pairs[0] = eyes[index];
             }
@@ -79,7 +79,7 @@ public class YatzyResultCalculator {
 
     public int threeOfAKindScore() {
         int[] eyes = sortEyeToLow();
-        for (int index = eyes.length - 1; index > 0; index--) {
+        for (int index = eyes.length - 1; index > eyes.length - 3; index--) {
             if (eyes[index] == eyes[index - 1] && eyes[index] == eyes[index - 2]) {
                 return eyes[index] * 3;
             }
@@ -89,7 +89,7 @@ public class YatzyResultCalculator {
 
     public int fourOfAKindScore() {
         int[] eyes = sortEyeToLow();
-        for (int index = eyes.length - 1; index > eyes.length - 3; index--) {
+        for (int index = eyes.length - 1; index > eyes.length - 2; index--) {
             if (eyes[index] == eyes[index - 1] && eyes[index] == eyes[index - 2] && eyes[index] == eyes[index - 3]) {
                 return eyes[index] * 4;
             }
@@ -142,8 +142,6 @@ public class YatzyResultCalculator {
     }
 
     public int fullHouseScore() {
-        Boolean fullHouse = false;
-
         if (threeOfAKindScore() > 0 && onePairScore() > 0 && fourOfAKindScore() == 0) {
             return threeOfAKindScore() + onePairScore();
         }
